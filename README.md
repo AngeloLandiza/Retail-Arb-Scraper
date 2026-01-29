@@ -92,13 +92,13 @@ This tool uses FREE methods instead of paid APIs:
 
 1. **Amazon Data** (replaces Keepa API - €15/month):
    - Uses Best Seller Rank (BSR) to estimate monthly sales
-   - Direct product page analysis for pricing
+   - Mock data for demonstration (real scraping requires additional setup)
    - No API costs
 
 2. **Sales Estimation** (replaces SellerAmp API):
-   - BSR-to-sales conversion formula
+   - BSR-to-sales conversion formula (approximate)
    - Category-based adjustments
-   - Free and accurate
+   - Free estimation (not exact, but useful for analysis)
 
 3. **Product Analysis** (optional LLM):
    - Built-in rule-based analysis (100% FREE)
@@ -122,12 +122,14 @@ Retail-Arb-Scraper/
 
 ### Free Methods Used
 
-**Amazon Sales Estimation:**
+**Amazon Sales Estimation (approximations):**
 - BSR < 1,000 → ~2,000 sales/month
 - BSR < 5,000 → ~500 sales/month
 - BSR < 10,000 → ~250 sales/month
 - BSR < 50,000 → ~100 sales/month
 - BSR < 100,000 → ~50 sales/month
+
+**Note**: These are rough estimates. Actual sales vary by category, seasonality, and other factors.
 
 **Analysis Algorithm:**
 ```javascript
@@ -136,6 +138,11 @@ Retail-Arb-Scraper/
 ✓ Moderate metrics = REVIEW
 ✗ IP Complaints = AVOID (always)
 ```
+
+**Current Implementation:**
+- Demo uses mock product data for legal/ethical demonstration
+- To get real data, you'll need to add scraping (check retailer ToS)
+- Or integrate with authorized APIs (Amazon Product Advertising API requires seller account)
 
 ## 💡 Optional Enhancements
 
@@ -147,7 +154,10 @@ For AI-powered insights, get a free API key from [OpenRouter](https://openrouter
 4. Enjoy AI-powered product analysis (still free!)
 
 ### Production Scraping
-To scrape real retailer data:
+
+**Important Note**: The current version uses mock/sample data for demonstration purposes.
+
+To scrape real retailer data, you'll need to:
 1. **Use Browser Automation**: Puppeteer/Playwright
 2. **Build Browser Extension**: Chrome/Firefox extension
 3. **Deploy Proxy Server**: Handle CORS restrictions

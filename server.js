@@ -2,11 +2,15 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const axios = require('axios');
-const cheerio = require('cheerio');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Valid retailers
+const VALID_RETAILERS = ['walmart', 'walgreens', 'target'];
+
+// ASIN validation regex (10 alphanumeric characters)
+const ASIN_REGEX = /^[A-Z0-9]{10}$/;
 
 // Middleware
 app.use(cors());
@@ -18,57 +22,64 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// API endpoint to get Amazon product data (free alternative to Keepa)
+// API endpoint to get Amazon product data
+// NOTE: Currently uses mock data for demonstration. 
+// Real implementation would require web scraping or Amazon API (with seller account)
 app.get('/api/amazon/:asin', async (req, res) => {
     const { asin } = req.params;
     
+    // Validate ASIN format
+    if (!ASIN_REGEX.test(asin)) {
+        return res.status(400).json({ error: 'Invalid ASIN format' });
+    }
+    
     try {
-        // Use Amazon's mobile API endpoint or scrape product page
-        // Note: This is a basic implementation. For production, consider using
-        // Amazon Product Advertising API or other authorized methods
-        
-        const amazonUrl = `https://www.amazon.com/dp/${asin}`;
-        
-        // For now, return mock data. In production, you would scrape or use API
+        // Using mock data for free, legal demonstration
+        // To get real data, you would need to implement web scraping (check retailer ToS)
+        // or use Amazon Product Advertising API (requires seller account)
         const mockData = await getMockAmazonData(asin);
         
         res.json(mockData);
     } catch (error) {
         console.error('Error fetching Amazon data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch Amazon data' });
-    }
-});
-
-// Free alternative: Get sales rank and seller data
-app.get('/api/amazon/:asin/rank', async (req, res) => {
-    const { asin } = req.params;
-    
-    try {
-        // This would use free scraping or API alternatives
-        const rankData = await getMockSalesRank(asin);
-        res.json(rankData);
-    } catch (error) {
-        console.error('Error fetching sales rank:', error.message);
-        res.status(500).json({ error: 'Failed to fetch sales rank' });
+        res.status(500).json({ 
+            error: 'Failed to fetch Amazon data',
+            details: error.message 
+        });
     }
 });
 
 // API endpoint for retailer scraping
+// NOTE: Currently uses mock data for demonstration
 app.post('/api/scrape', async (req, res) => {
     const { retailer, query } = req.body;
     
+    // Validate retailer
+    if (!VALID_RETAILERS.includes(retailer)) {
+        return res.status(400).json({ 
+            error: 'Invalid retailer',
+            validRetailers: VALID_RETAILERS 
+        });
+    }
+    
     try {
-        // In production, implement actual scraping logic
-        // For now, return mock data
+        // Using mock data for demonstration
+        // Real implementation requires web scraping (check retailer terms of service)
         const products = await getMockRetailerProducts(retailer, query);
         res.json({ products });
     } catch (error) {
         console.error('Error scraping retailer:', error.message);
-        res.status(500).json({ error: 'Failed to scrape retailer' });
+        res.status(500).json({ 
+            error: 'Failed to scrape retailer',
+            details: error.message 
+        });
     }
 });
 
-// Mock data functions (replace with actual implementations)
+// Mock data functions
+// NOTE: These provide sample data for demonstration purposes
+// In a production environment with real scraping, replace these with actual data fetching
+
 function getMockAmazonData(asin) {
     const mockData = {
         'B08ASIN001': {
@@ -144,33 +155,6 @@ function getMockAmazonData(asin) {
         reviews: 0,
         rating: 0,
         inStock: false
-    };
-}
-
-function getMockSalesRank(asin) {
-    // Estimate monthly sales based on BSR (Best Sellers Rank)
-    // This is a simplified approximation
-    const amazonData = getMockAmazonData(asin);
-    const bsr = amazonData.salesRank;
-    
-    let monthlySales = 0;
-    if (bsr < 1000) monthlySales = 2000;
-    else if (bsr < 5000) monthlySales = 500;
-    else if (bsr < 10000) monthlySales = 250;
-    else if (bsr < 50000) monthlySales = 100;
-    else if (bsr < 100000) monthlySales = 50;
-    else monthlySales = 20;
-    
-    return {
-        asin: asin,
-        salesRank: bsr,
-        monthlySales: monthlySales,
-        avgPrice30Days: amazonData.price * 1.05,
-        avgPrice90Days: amazonData.price * 1.08,
-        avgPrice360Days: amazonData.price * 1.12,
-        lowestPrice360Days: amazonData.price * 0.85,
-        highestPrice360Days: amazonData.price * 1.25,
-        priceDrops: Math.floor(Math.random() * 5) + 1
     };
 }
 
