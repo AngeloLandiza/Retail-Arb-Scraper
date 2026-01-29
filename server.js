@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,9 +13,17 @@ const VALID_RETAILERS = ['walmart', 'walgreens', 'target'];
 // ASIN validation regex (10 alphanumeric characters)
 const ASIN_REGEX = /^[A-Z0-9]{10}$/;
 
+// Rate limiting to prevent abuse
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api/', apiLimiter); // Apply rate limiting to all API routes
 app.use(express.static(path.join(__dirname)));
 
 // Serve index.html at root
