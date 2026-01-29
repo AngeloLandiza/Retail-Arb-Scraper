@@ -1,7 +1,7 @@
 {
   "name": "retail-arb-scraper",
-  "version": "1.0.0",
-  "description": "GitHub Pages tool for finding retail arbitrage opportunities",
+  "version": "2.0.0",
+  "description": "100% FREE local tool for finding retail arbitrage opportunities",
   "sop": {
     "minPrice": 10,
     "minMonthlySales": 50,
@@ -9,19 +9,10 @@
     "maxSellers": 20
   },
   "apis": {
-    "keepa": {
-      "endpoint": "https://api.keepa.com",
-      "domain": 1,
-      "note": "Get API key from keepa.com"
-    },
-    "selleramp": {
-      "endpoint": "https://api.selleramp.com",
-      "note": "Get API key from selleramp.com"
-    },
     "openrouter": {
       "endpoint": "https://openrouter.ai/api/v1/chat/completions",
       "defaultModel": "meta-llama/llama-3.2-3b-instruct:free",
-      "note": "Free API key from openrouter.ai"
+      "note": "OPTIONAL - Free API key from openrouter.ai for AI-powered analysis. Tool works 100% FREE without this."
     }
   },
   "retailers": [
@@ -36,6 +27,8 @@
   "analysis": {
     "priceHistoryDays": 360,
     "minScoreForBuy": 70,
-    "maxIPComplaints": 0
+    "maxIPComplaints": 0,
+    "useFreeAnalysis": true,
+    "note": "Uses BSR-to-sales estimation (free) instead of paid Keepa API"
   }
 }
