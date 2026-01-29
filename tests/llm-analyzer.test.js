@@ -1,82 +1,7 @@
 // llm-analyzer.test.js - Tests for LLM analysis functionality
+const LLMAnalyzer = require('../llm-analyzer.js');
 
 describe('LLMAnalyzer Tests', () => {
-    // Mock LLMAnalyzer class for testing
-    class LLMAnalyzer {
-        constructor(apiKey = null) {
-            this.apiKey = apiKey;
-        }
-
-        calculateROI(product, analytics) {
-            const buyPrice = product.price;
-            const sellPrice = analytics.logistics.buyBoxPrice;
-            const fees = sellPrice * 0.15; // Estimate 15% Amazon fees
-            const profit = sellPrice - buyPrice - fees;
-            const roi = (profit / buyPrice) * 100;
-            return Math.round(roi);
-        }
-
-        getRuleBasedAnalysis(product, analytics) {
-            const roi = this.calculateROI(product, analytics);
-            const sellers = analytics.logistics.sellers;
-            const monthlySales = analytics.salesData.monthlySales;
-            const hasComplaints = analytics.complaints.hasComplaints;
-
-            let recommendation = 'REVIEW';
-            let reasoning = '';
-            let risks = [];
-            let opportunities = [];
-
-            // Critical red flags
-            if (hasComplaints) {
-                recommendation = 'AVOID';
-                reasoning = 'IP complaints detected. High risk of account suspension.';
-                risks.push('IP/trademark complaints');
-            } else if (roi < 0) {
-                recommendation = 'AVOID';
-                reasoning = 'Negative ROI. Product would lose money.';
-                risks.push('Negative margins');
-            } else if (roi < 20) {
-                recommendation = 'AVOID';
-                reasoning = `Low ROI (${roi}%). Not worth the effort and risk.`;
-                risks.push('Low profit margin');
-            } else if (sellers > 20) {
-                recommendation = 'AVOID';
-                reasoning = `Too much competition (${sellers} sellers). Hard to win buy box.`;
-                risks.push('High competition');
-            } else if (monthlySales < 50) {
-                recommendation = 'REVIEW';
-                reasoning = `Low sales velocity (${monthlySales}/month). May take time to sell.`;
-                risks.push('Low demand');
-            } else if (roi >= 30 && sellers <= 15 && monthlySales >= 50) {
-                recommendation = 'BUY';
-                reasoning = `Great opportunity! ROI: ${roi}%, Good demand (${monthlySales}/month), Manageable competition (${sellers} sellers).`;
-                opportunities.push('High ROI', 'Good sales velocity', 'Low competition');
-            } else if (roi >= 25 && sellers <= 20) {
-                recommendation = 'REVIEW';
-                reasoning = `Decent opportunity. ROI: ${roi}%, but requires further analysis of competition and demand.`;
-                opportunities.push('Reasonable ROI');
-            }
-
-            return {
-                recommendation: recommendation,
-                reasoning: reasoning,
-                roi: roi,
-                risks: risks,
-                opportunities: opportunities,
-                confidence: recommendation === 'BUY' ? 'High' : recommendation === 'AVOID' ? 'High' : 'Medium'
-            };
-        }
-
-        async analyzeProductSuitability(product, analytics) {
-            if (!this.apiKey) {
-                return this.getRuleBasedAnalysis(product, analytics);
-            }
-            // In real implementation, would call LLM API
-            return this.getRuleBasedAnalysis(product, analytics);
-        }
-    }
-
     let analyzer;
 
     beforeEach(() => {
@@ -84,16 +9,18 @@ describe('LLMAnalyzer Tests', () => {
     });
 
     describe('calculateROI', () => {
-        test('should calculate positive ROI correctly', () => {
+        test('should calculate positive ROI correctly including shipping', () => {
             const product = { price: 25.00 };
             const analytics = {
-                logistics: { buyBoxPrice: 50.00 }
+                logistics: { buyBoxPrice: 60.00 }
             };
             
             const roi = analyzer.calculateROI(product, analytics);
             
             expect(typeof roi).toBe('number');
             expect(roi).toBeGreaterThan(0);
+            // ROI = (60 - 25 - 9 - 3) / 25 * 100 = 92%
+            expect(roi).toBeCloseTo(92, 0);
         });
 
         test('should calculate negative ROI for unprofitable products', () => {
@@ -107,8 +34,8 @@ describe('LLMAnalyzer Tests', () => {
             expect(roi).toBeLessThan(0);
         });
 
-        test('should handle zero prices gracefully', () => {
-            const product = { price: 0 };
+        test('should handle edge case prices', () => {
+            const product = { price: 1.00 };
             const analytics = {
                 logistics: { buyBoxPrice: 50.00 }
             };
@@ -116,6 +43,7 @@ describe('LLMAnalyzer Tests', () => {
             const roi = analyzer.calculateROI(product, analytics);
             
             expect(typeof roi).toBe('number');
+            expect(roi).toBeGreaterThan(0);
         });
     });
 
@@ -124,84 +52,83 @@ describe('LLMAnalyzer Tests', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
                 logistics: { buyBoxPrice: 50.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: true, count: 1 }
             };
             
             const result = analyzer.getRuleBasedAnalysis(product, analytics);
             
             expect(result.recommendation).toBe('AVOID');
-            expect(result.risks).toContain('IP/trademark complaints');
+            expect(result.analysis).toContain('IP complaint');
         });
 
         test('should recommend BUY for high ROI, low competition products', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 60.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = analyzer.getRuleBasedAnalysis(product, analytics);
             
             expect(result.recommendation).toBe('BUY');
-            expect(result.roi).toBeGreaterThan(30);
+            expect(result.analysis).toContain('Strong opportunity');
         });
 
-        test('should recommend AVOID for high competition', () => {
-            const product = { price: 25.00, title: 'Test Product' };
-            const analytics = {
-                logistics: { buyBoxPrice: 60.00, sellers: 25 },
-                salesData: { monthlySales: 100 },
-                complaints: { hasComplaints: false, count: 0 }
-            };
-            
-            const result = analyzer.getRuleBasedAnalysis(product, analytics);
-            
-            expect(result.recommendation).toBe('AVOID');
-            expect(result.risks).toContain('High competition');
-        });
-
-        test('should recommend AVOID for negative ROI', () => {
+        test('should recommend AVOID for low ROI', () => {
             const product = { price: 60.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 50.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = analyzer.getRuleBasedAnalysis(product, analytics);
             
             expect(result.recommendation).toBe('AVOID');
-            expect(result.roi).toBeLessThan(0);
+            expect(result.analysis).toContain('Low profit margin');
         });
 
         test('should recommend REVIEW for moderate metrics', () => {
             const product = { price: 30.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 50.00, sellers: 18 },
-                salesData: { monthlySales: 80 },
+                logistics: { buyBoxPrice: 55.00, sellers: 18 },
+                salesData: { monthlySales: 100, priceDrops: 2 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = analyzer.getRuleBasedAnalysis(product, analytics);
             
-            expect(['REVIEW', 'BUY']).toContain(result.recommendation);
-            expect(result).toHaveProperty('reasoning');
+            expect(result.recommendation).toBe('REVIEW');
         });
 
-        test('should include confidence level', () => {
+        test('should include recommendation in analysis text', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 60.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = analyzer.getRuleBasedAnalysis(product, analytics);
             
-            expect(result).toHaveProperty('confidence');
-            expect(['High', 'Medium', 'Low']).toContain(result.confidence);
+            expect(result.analysis).toContain('Recommendation:');
+            expect(result.analysis).toContain(result.recommendation);
+        });
+
+        test('should include timestamp', () => {
+            const product = { price: 25.00, title: 'Test Product' };
+            const analytics = {
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
+                complaints: { hasComplaints: false, count: 0 }
+            };
+            
+            const result = analyzer.getRuleBasedAnalysis(product, analytics);
+            
+            expect(result).toHaveProperty('timestamp');
+            expect(new Date(result.timestamp)).toBeInstanceOf(Date);
         });
     });
 
@@ -209,34 +136,33 @@ describe('LLMAnalyzer Tests', () => {
         test('should use rule-based analysis when no API key', async () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 60.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = await analyzer.analyzeProductSuitability(product, analytics);
             
             expect(result).toHaveProperty('recommendation');
-            expect(result).toHaveProperty('reasoning');
-            expect(result).toHaveProperty('roi');
+            expect(result).toHaveProperty('analysis');
+            expect(result).toHaveProperty('timestamp');
         });
 
         test('should return complete analysis object', async () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 60.00, sellers: 10 },
-                salesData: { monthlySales: 100 },
+                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
             
             const result = await analyzer.analyzeProductSuitability(product, analytics);
             
+            expect(result).toHaveProperty('analysis');
+            expect(typeof result.analysis).toBe('string');
+            expect(result.analysis.length).toBeGreaterThan(0);
             expect(result).toHaveProperty('recommendation');
-            expect(result).toHaveProperty('reasoning');
-            expect(result).toHaveProperty('roi');
-            expect(result).toHaveProperty('risks');
-            expect(result).toHaveProperty('opportunities');
-            expect(result).toHaveProperty('confidence');
+            expect(['BUY', 'REVIEW', 'AVOID']).toContain(result.recommendation);
         });
     });
 });

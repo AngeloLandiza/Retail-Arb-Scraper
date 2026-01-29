@@ -13,7 +13,7 @@ The test suite is built using **Jest** and **Supertest** to ensure the applicati
 - **amazon-analyzer.test.js** - Amazon analysis module tests
 - **llm-analyzer.test.js** - LLM analysis module tests
 
-### Total Tests: 27 passing
+### Total Tests: 28 passing
 
 ## Running Tests
 
@@ -39,7 +39,7 @@ npm run test:coverage
 
 ## Test Details
 
-### Server API Tests (12 tests)
+### Server API Tests (6 tests)
 Tests the Express server API endpoints:
 
 #### GET /api/amazon/:asin
@@ -52,7 +52,7 @@ Tests the Express server API endpoints:
 - ✅ Returns 400 for invalid retailer
 - ✅ Accepts all valid retailers (walmart, walgreens, target)
 
-### Amazon Analyzer Tests (9 tests)
+### Amazon Analyzer Tests (10 tests)
 Tests the Amazon analysis functionality:
 
 #### Product Logistics
@@ -67,29 +67,30 @@ Tests the Amazon analysis functionality:
 - ✅ Returns no complaints by default
 
 #### Score Calculation
-- ✅ Calculates high score for good product
+- ✅ Calculates high score for good product with low competition and good sales
 - ✅ Reduces score for products with complaints
 - ✅ Reduces score for high competition
+- ✅ Reduces score for low sales
 
 #### Full Analysis
 - ✅ Returns complete analysis for ASIN
 - ✅ Calculates score correctly
 
-### LLM Analyzer Tests (6 tests)
+### LLM Analyzer Tests (12 tests)
 Tests the LLM analysis and rule-based recommendation engine:
 
 #### ROI Calculation
-- ✅ Calculates positive ROI correctly
+- ✅ Calculates positive ROI correctly including shipping
 - ✅ Calculates negative ROI for unprofitable products
-- ✅ Handles zero prices gracefully
+- ✅ Handles edge case prices
 
 #### Rule-Based Analysis
 - ✅ Recommends AVOID for products with IP complaints
 - ✅ Recommends BUY for high ROI, low competition products
-- ✅ Recommends AVOID for high competition
-- ✅ Recommends AVOID for negative ROI
+- ✅ Recommends AVOID for low ROI
 - ✅ Recommends REVIEW for moderate metrics
-- ✅ Includes confidence level
+- ✅ Includes recommendation in analysis text
+- ✅ Includes timestamp
 
 #### Product Suitability Analysis
 - ✅ Uses rule-based analysis when no API key
@@ -125,13 +126,13 @@ These tests can be integrated into CI/CD pipelines to ensure code quality:
 
 ## Test Results
 
-All 27 tests are passing ✅
+All 28 tests are passing ✅
 
 ```
 Test Suites: 3 passed, 3 total
-Tests:       27 passed, 27 total
+Tests:       28 passed, 28 total
 Snapshots:   0 total
-Time:        ~1s
+Time:        ~4s
 ```
 
 ## Adding New Tests

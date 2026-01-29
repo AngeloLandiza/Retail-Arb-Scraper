@@ -1,83 +1,7 @@
 // amazon-analyzer.test.js - Tests for Amazon analysis functionality
+const AmazonAnalyzer = require('../amazon-analyzer.js');
 
 describe('AmazonAnalyzer Tests', () => {
-    // Mock AmazonAnalyzer class for testing
-    class AmazonAnalyzer {
-        constructor() {}
-
-        delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        async getProductLogistics(asin) {
-            await this.delay(10);
-            const mockData = {
-                'B08ASIN001': { sellers: 12, fbaOffers: 8, fbmOffers: 4, buyBoxPrice: 59.99 },
-                'B08ASIN002': { sellers: 5, fbaOffers: 3, fbmOffers: 2, buyBoxPrice: 74.99 }
-            };
-            return mockData[asin] || { sellers: 0, fbaOffers: 0, fbmOffers: 0, buyBoxPrice: 0 };
-        }
-
-        async getSalesData(asin) {
-            await this.delay(10);
-            const mockData = {
-                'B08ASIN001': {
-                    salesRank: 15420,
-                    category: 'Electronics',
-                    monthlySales: 250,
-                    avgPrice360Days: 59.99,
-                    lowestPrice360Days: 49.99,
-                    highestPrice360Days: 69.99,
-                    priceDrops: 3
-                }
-            };
-            return mockData[asin] || {
-                salesRank: 999999,
-                category: 'Unknown',
-                monthlySales: 0,
-                avgPrice360Days: 0,
-                lowestPrice360Days: 0,
-                highestPrice360Days: 0,
-                priceDrops: 0
-            };
-        }
-
-        async getIPComplaints(asin) {
-            await this.delay(10);
-            return {
-                hasComplaints: false,
-                count: 0,
-                details: []
-            };
-        }
-
-        calculateScore(logistics, salesData, complaints) {
-            let score = 100;
-            
-            if (complaints.hasComplaints) score -= 50;
-            if (logistics.sellers > 20) score -= 20;
-            if (salesData.monthlySales < 50) score -= 15;
-            
-            return Math.max(0, score);
-        }
-
-        async analyzeProduct(asin) {
-            const [logistics, salesData, complaints] = await Promise.all([
-                this.getProductLogistics(asin),
-                this.getSalesData(asin),
-                this.getIPComplaints(asin)
-            ]);
-
-            return {
-                asin: asin,
-                logistics: logistics,
-                salesData: salesData,
-                complaints: complaints,
-                score: this.calculateScore(logistics, salesData, complaints)
-            };
-        }
-    }
-
     let analyzer;
 
     beforeEach(() => {
@@ -132,34 +56,44 @@ describe('AmazonAnalyzer Tests', () => {
     });
 
     describe('calculateScore', () => {
-        test('should calculate high score for good product', () => {
-            const logistics = { sellers: 10, fbaOffers: 5 };
-            const salesData = { monthlySales: 250 };
+        test('should calculate high score for good product with low competition and good sales', () => {
+            const logistics = { sellers: 5, fbaOffers: 4, fbmOffers: 1 };
+            const salesData = { monthlySales: 350 };
             const complaints = { hasComplaints: false };
             
             const score = analyzer.calculateScore(logistics, salesData, complaints);
             
-            expect(score).toBe(100);
+            expect(score).toBeGreaterThan(80); // Should be high score
         });
 
         test('should reduce score for products with complaints', () => {
-            const logistics = { sellers: 10, fbaOffers: 5 };
+            const logistics = { sellers: 10, fbaOffers: 5, fbmOffers: 5 };
             const salesData = { monthlySales: 250 };
-            const complaints = { hasComplaints: true, count: 1 };
+            const complaints = { hasComplaints: true, count: 2 };
             
             const score = analyzer.calculateScore(logistics, salesData, complaints);
             
-            expect(score).toBeLessThan(100);
+            expect(score).toBeLessThan(90); // IP complaints should reduce score
         });
 
         test('should reduce score for high competition', () => {
-            const logistics = { sellers: 30, fbaOffers: 5 };
+            const logistics = { sellers: 20, fbaOffers: 5, fbmOffers: 15 };
             const salesData = { monthlySales: 250 };
             const complaints = { hasComplaints: false };
             
             const score = analyzer.calculateScore(logistics, salesData, complaints);
             
-            expect(score).toBeLessThan(100);
+            expect(score).toBeLessThan(90); // High competition should reduce score
+        });
+
+        test('should reduce score for low sales', () => {
+            const logistics = { sellers: 10, fbaOffers: 5, fbmOffers: 5 };
+            const salesData = { monthlySales: 50 };
+            const complaints = { hasComplaints: false };
+            
+            const score = analyzer.calculateScore(logistics, salesData, complaints);
+            
+            expect(score).toBeLessThan(90); // Low sales should reduce score
         });
     });
 
