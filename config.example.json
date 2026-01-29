@@ -1,0 +1,41 @@
+{
+  "name": "retail-arb-scraper",
+  "version": "1.0.0",
+  "description": "GitHub Pages tool for finding retail arbitrage opportunities",
+  "sop": {
+    "minPrice": 10,
+    "minMonthlySales": 50,
+    "minROI": 30,
+    "maxSellers": 20
+  },
+  "apis": {
+    "keepa": {
+      "endpoint": "https://api.keepa.com",
+      "domain": 1,
+      "note": "Get API key from keepa.com"
+    },
+    "selleramp": {
+      "endpoint": "https://api.selleramp.com",
+      "note": "Get API key from selleramp.com"
+    },
+    "openrouter": {
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "defaultModel": "meta-llama/llama-3.2-3b-instruct:free",
+      "note": "Free API key from openrouter.ai"
+    }
+  },
+  "retailers": [
+    "walmart",
+    "walgreens",
+    "target"
+  ],
+  "amazonFees": {
+    "referralFee": 0.15,
+    "estimatedShipping": 3.00
+  },
+  "analysis": {
+    "priceHistoryDays": 360,
+    "minScoreForBuy": 70,
+    "maxIPComplaints": 0
+  }
+}
