@@ -2,6 +2,8 @@
 
 let scraper, amazonAnalyzer, llmAnalyzer;
 let currentResults = [];
+let searchIntervalId = null;
+let searchInFlight = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,6 +30,29 @@ function setupEventListeners() {
     document.getElementById('searchQuery').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             searchProducts();
+        }
+    });
+
+    document.getElementById('retailer').addEventListener('change', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
+            searchIntervalId = null;
+        }
+        currentResults = [];
+        document.getElementById('results').innerHTML = '';
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
+            searchIntervalId = null;
+        }
+        searchProducts();
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
         }
     });
 }
@@ -65,24 +90,34 @@ function getConfig() {
     };
 }
 
+let searchIntervalId = null;
+
 async function searchProducts() {
+    const llmKey = document.getElementById('llmApiKey').value;
+    amazonAnalyzer = new AmazonAnalyzer();
+    llmAnalyzer = new LLMAnalyzer(llmKey);
+
+    await runSearch();
+
+    if (searchIntervalId) {
+        clearInterval(searchIntervalId);
+    }
+    searchIntervalId = setInterval(() => runSearch(), 10000);
+}
+
+async function runSearch() {
+    if (searchInFlight) return;
+    searchInFlight = true;
+
     const retailer = document.getElementById('retailer').value;
     const query = document.getElementById('searchQuery').value.trim();
     const config = getConfig();
 
-    // Update analyzer instances with API key (optional)
-    const llmKey = document.getElementById('llmApiKey').value;
-
-    amazonAnalyzer = new AmazonAnalyzer();
-    llmAnalyzer = new LLMAnalyzer(llmKey);
-
-    // Show loading
     document.getElementById('loading').style.display = 'block';
     document.getElementById('results').innerHTML = '';
     currentResults = [];
 
     try {
-        // Step 1: Scrape retail products
         console.log('Scraping products...');
         const products = await scraper.scrapeProducts(retailer, query);
 
@@ -91,19 +126,13 @@ async function searchProducts() {
             return;
         }
 
-        // Step 2: Analyze each product
         console.log(`Analyzing ${products.length} products...`);
         const analyzedProducts = [];
 
         for (const product of products) {
             try {
-                // Get Amazon analytics
                 const analytics = await amazonAnalyzer.analyzeProduct(product.asin);
-                
-                // Validate against SOP
                 const sopValidation = amazonAnalyzer.validateSOP(product, analytics, config);
-                
-                // Get LLM analysis
                 const llmAnalysis = await llmAnalyzer.analyzeProductSuitability(product, analytics);
 
                 analyzedProducts.push({
@@ -125,6 +154,7 @@ async function searchProducts() {
         showError('An error occurred while searching. Please try again.');
     } finally {
         document.getElementById('loading').style.display = 'none';
+        searchInFlight = false;
     }
 }
 

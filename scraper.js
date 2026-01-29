@@ -34,68 +34,88 @@ class RetailScraper {
      * In production, replace with actual scraping logic
      */
     getMockProducts(retailer, query) {
-        const mockProducts = [
-            {
-                id: '1',
-                title: 'Wireless Bluetooth Headphones - Clearance',
-                retailer: retailer,
-                price: 24.99,
-                originalPrice: 79.99,
-                url: `${this.retailers[retailer]}/product/1`,
-                image: 'https://via.placeholder.com/300x300?text=Headphones',
-                asin: 'B08ASIN001',
-                clearance: true,
-                stock: 'In Stock'
-            },
-            {
-                id: '2',
-                title: 'Kitchen Knife Set 15-Piece - Sale',
-                retailer: retailer,
-                price: 34.99,
-                originalPrice: 89.99,
-                url: `${this.retailers[retailer]}/product/2`,
-                image: 'https://via.placeholder.com/300x300?text=Knife+Set',
-                asin: 'B08ASIN002',
-                clearance: true,
-                stock: 'Limited Stock'
-            },
-            {
-                id: '3',
-                title: 'Yoga Mat with Carrying Strap - Clearance',
-                retailer: retailer,
-                price: 15.99,
-                originalPrice: 39.99,
-                url: `${this.retailers[retailer]}/product/3`,
-                image: 'https://via.placeholder.com/300x300?text=Yoga+Mat',
-                asin: 'B08ASIN003',
-                clearance: true,
-                stock: 'In Stock'
-            },
-            {
-                id: '4',
-                title: 'Smart Watch Fitness Tracker - Sale',
-                retailer: retailer,
-                price: 45.99,
-                originalPrice: 129.99,
-                url: `${this.retailers[retailer]}/product/4`,
-                image: 'https://via.placeholder.com/300x300?text=Smart+Watch',
-                asin: 'B08ASIN004',
-                clearance: true,
-                stock: 'In Stock'
-            },
-            {
-                id: '5',
-                title: 'Coffee Maker 12-Cup Programmable - Clearance',
-                retailer: retailer,
-                price: 29.99,
-                originalPrice: 69.99,
-                url: `${this.retailers[retailer]}/product/5`,
-                image: 'https://via.placeholder.com/300x300?text=Coffee+Maker',
-                asin: 'B08ASIN005',
-                clearance: true,
-                stock: 'Low Stock'
-            }
-        ];
+        const catalog = {
+            walmart: [
+                {
+                    id: 'wm-1',
+                    title: 'Wireless Bluetooth Headphones - Clearance',
+                    retailer: retailer,
+                    price: 24.99,
+                    originalPrice: 79.99,
+                    url: `${this.retailers[retailer]}/ip/123456789`,
+                    image: 'https://via.placeholder.com/300x300?text=Headphones',
+                    asin: 'B08ASIN001',
+                    clearance: true,
+                    stock: 'In Stock'
+                },
+                {
+                    id: 'wm-2',
+                    title: 'Air Fryer 6QT Digital - Rollback',
+                    retailer: retailer,
+                    price: 59.0,
+                    originalPrice: 119.0,
+                    url: `${this.retailers[retailer]}/ip/987654321`,
+                    image: 'https://via.placeholder.com/300x300?text=Air+Fryer',
+                    asin: 'B08ASIN006',
+                    clearance: true,
+                    stock: 'Limited Stock'
+                }
+            ],
+            walgreens: [
+                {
+                    id: 'wg-1',
+                    title: 'Vitamin C Gummies 90ct - BOGO',
+                    retailer: retailer,
+                    price: 8.99,
+                    originalPrice: 16.99,
+                    url: `${this.retailers[retailer]}/store/c/product/1234`,
+                    image: 'https://via.placeholder.com/300x300?text=Vitamins',
+                    asin: 'B08ASIN007',
+                    clearance: true,
+                    stock: 'In Stock'
+                },
+                {
+                    id: 'wg-2',
+                    title: 'Wireless Earbuds with Case - Clearance',
+                    retailer: retailer,
+                    price: 19.99,
+                    originalPrice: 49.99,
+                    url: `${this.retailers[retailer]}/store/c/product/5678`,
+                    image: 'https://via.placeholder.com/300x300?text=Earbuds',
+                    asin: 'B08ASIN008',
+                    clearance: true,
+                    stock: 'Low Stock'
+                }
+            ],
+            target: [
+                {
+                    id: 'tg-1',
+                    title: 'Kitchen Knife Set 15-Piece - Sale',
+                    retailer: retailer,
+                    price: 34.99,
+                    originalPrice: 89.99,
+                    url: `${this.retailers[retailer]}/p/knife-set/123`,
+                    image: 'https://via.placeholder.com/300x300?text=Knife+Set',
+                    asin: 'B08ASIN002',
+                    clearance: true,
+                    stock: 'Limited Stock'
+                },
+                {
+                    id: 'tg-2',
+                    title: 'Yoga Mat with Carrying Strap - Clearance',
+                    retailer: retailer,
+                    price: 15.99,
+                    originalPrice: 39.99,
+                    url: `${this.retailers[retailer]}/p/yoga-mat/456`,
+                    image: 'https://via.placeholder.com/300x300?text=Yoga+Mat',
+                    asin: 'B08ASIN003',
+                    clearance: true,
+                    stock: 'In Stock'
+                }
+            ]
+        };
+
+        const mockProducts = catalog[retailer] || [];
 
         // Filter by query if provided
         if (query && query.trim()) {
