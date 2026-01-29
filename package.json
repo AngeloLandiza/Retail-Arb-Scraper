@@ -1,0 +1,24 @@
+{
+  "name": "retail-arb-scraper",
+  "version": "2.0.0",
+  "description": "Free local tool for finding retail arbitrage opportunities",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "retail",
+    "arbitrage",
+    "amazon",
+    "scraper"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5"
+  }
+}

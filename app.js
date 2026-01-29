@@ -51,8 +51,6 @@ function saveConfig() {
         minMonthlySales: document.getElementById('minMonthlySales').value,
         minROI: document.getElementById('minROI').value,
         maxSellers: document.getElementById('maxSellers').value,
-        keepaApiKey: document.getElementById('keepaApiKey').value,
-        sellerampApiKey: document.getElementById('sellerampApiKey').value,
         llmApiKey: document.getElementById('llmApiKey').value
     };
     localStorage.setItem('arbScraper_config', JSON.stringify(config));
@@ -72,12 +70,10 @@ async function searchProducts() {
     const query = document.getElementById('searchQuery').value.trim();
     const config = getConfig();
 
-    // Update analyzer instances with API keys
-    const keepaKey = document.getElementById('keepaApiKey').value;
-    const sellerampKey = document.getElementById('sellerampApiKey').value;
+    // Update analyzer instances with API key (optional)
     const llmKey = document.getElementById('llmApiKey').value;
 
-    amazonAnalyzer = new AmazonAnalyzer(keepaKey, sellerampKey);
+    amazonAnalyzer = new AmazonAnalyzer();
     llmAnalyzer = new LLMAnalyzer(llmKey);
 
     // Show loading

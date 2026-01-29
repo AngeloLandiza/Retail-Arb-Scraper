@@ -2,10 +2,10 @@
 
 class LLMAnalyzer {
     constructor(apiKey = null) {
-        // Using OpenRouter which provides access to free models
+        // LLM is optional - the tool works without it using rule-based analysis
         this.apiKey = apiKey;
         this.apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
-        this.model = 'meta-llama/llama-3.2-3b-instruct:free'; // Free model
+        this.model = 'meta-llama/llama-3.2-3b-instruct:free'; // Free model (if API key provided)
         
         this.systemPrompt = `You are an expert retail arbitrage analyst specializing in evaluating products for resale potential on Amazon. 
 
@@ -33,15 +33,17 @@ Be direct and business-focused.`;
     }
 
     /**
-     * Analyze product suitability for reselling using LLM
+     * Analyze product suitability for reselling
+     * Uses rule-based analysis (no API required) or optional LLM if API key provided
      * @param {object} product - Product information
      * @param {object} analytics - Amazon analytics data
-     * @returns {Promise<object>} LLM analysis and recommendation
+     * @returns {Promise<object>} Analysis and recommendation
      */
     async analyzeProductSuitability(product, analytics) {
-        // If no API key, return mock analysis
+        // Use rule-based analysis (free, no API needed)
+        // This provides reliable recommendations without external dependencies
         if (!this.apiKey) {
-            return this.getMockAnalysis(product, analytics);
+            return this.getRuleBasedAnalysis(product, analytics);
         }
 
         try {
@@ -49,8 +51,8 @@ Be direct and business-focused.`;
             const response = await this.callLLM(productData);
             return this.parseResponse(response);
         } catch (error) {
-            console.error('LLM API error:', error);
-            return this.getMockAnalysis(product, analytics);
+            console.error('LLM API error, falling back to rule-based analysis:', error);
+            return this.getRuleBasedAnalysis(product, analytics);
         }
     }
 
@@ -139,9 +141,10 @@ Analyze this product for resale suitability.`;
     }
 
     /**
-     * Mock LLM analysis when no API key is provided
+     * Rule-based analysis - FREE, no API required
+     * Provides intelligent recommendations based on market data
      */
-    getMockAnalysis(product, analytics) {
+    getRuleBasedAnalysis(product, analytics) {
         const roi = this.calculateROI(product, analytics);
         const hasIPComplaints = analytics.complaints.hasComplaints;
         const highCompetition = analytics.logistics.sellers > 15;
