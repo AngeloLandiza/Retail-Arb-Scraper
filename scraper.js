@@ -56,7 +56,7 @@ class RetailScraper {
                     originalPrice: 119.0,
                     url: `${this.retailers[retailer]}/ip/987654321`,
                     image: 'https://via.placeholder.com/300x300?text=Air+Fryer',
-                    asin: 'B08ASIN005',
+                    asin: 'B08ASIN006',
                     clearance: true,
                     stock: 'Limited Stock'
                 }
@@ -70,7 +70,7 @@ class RetailScraper {
                     originalPrice: 16.99,
                     url: `${this.retailers[retailer]}/store/c/product/1234`,
                     image: 'https://via.placeholder.com/300x300?text=Vitamins',
-                    asin: 'B08ASIN003',
+                    asin: 'B08ASIN007',
                     clearance: true,
                     stock: 'In Stock'
                 },
@@ -82,7 +82,7 @@ class RetailScraper {
                     originalPrice: 49.99,
                     url: `${this.retailers[retailer]}/store/c/product/5678`,
                     image: 'https://via.placeholder.com/300x300?text=Earbuds',
-                    asin: 'B08ASIN001',
+                    asin: 'B08ASIN008',
                     clearance: true,
                     stock: 'Low Stock'
                 }

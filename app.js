@@ -2,6 +2,8 @@
 
 let scraper, amazonAnalyzer, llmAnalyzer;
 let currentResults = [];
+let searchIntervalId = null;
+let searchInFlight = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +38,8 @@ function setupEventListeners() {
             clearInterval(searchIntervalId);
             searchIntervalId = null;
         }
+        currentResults = [];
+        document.getElementById('results').innerHTML = '';
     });
 
     document.getElementById('searchBtn').addEventListener('click', () => {
@@ -44,6 +48,12 @@ function setupEventListeners() {
             searchIntervalId = null;
         }
         searchProducts();
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
+        }
     });
 }
 
@@ -83,30 +93,26 @@ function getConfig() {
 let searchIntervalId = null;
 
 async function searchProducts() {
-    const retailer = document.getElementById('retailer').value;
-    const query = document.getElementById('searchQuery').value.trim();
-    const config = getConfig();
-
-    // Update analyzer instances with API key (optional)
     const llmKey = document.getElementById('llmApiKey').value;
-
     amazonAnalyzer = new AmazonAnalyzer();
     llmAnalyzer = new LLMAnalyzer(llmKey);
 
-    // Show loading
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('results').innerHTML = '';
-    currentResults = [];
-
-    await runSearch(retailer, query, config);
+    await runSearch();
 
     if (searchIntervalId) {
         clearInterval(searchIntervalId);
     }
-    searchIntervalId = setInterval(() => runSearch(retailer, query, config), 10000);
+    searchIntervalId = setInterval(() => runSearch(), 10000);
 }
 
-async function runSearch(retailer, query, config) {
+async function runSearch() {
+    if (searchInFlight) return;
+    searchInFlight = true;
+
+    const retailer = document.getElementById('retailer').value;
+    const query = document.getElementById('searchQuery').value.trim();
+    const config = getConfig();
+
     document.getElementById('loading').style.display = 'block';
     document.getElementById('results').innerHTML = '';
     currentResults = [];
@@ -148,6 +154,7 @@ async function runSearch(retailer, query, config) {
         showError('An error occurred while searching. Please try again.');
     } finally {
         document.getElementById('loading').style.display = 'none';
+        searchInFlight = false;
     }
 }
 
