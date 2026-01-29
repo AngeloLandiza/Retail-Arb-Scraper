@@ -30,6 +30,21 @@ function setupEventListeners() {
             searchProducts();
         }
     });
+
+    document.getElementById('retailer').addEventListener('change', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
+            searchIntervalId = null;
+        }
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        if (searchIntervalId) {
+            clearInterval(searchIntervalId);
+            searchIntervalId = null;
+        }
+        searchProducts();
+    });
 }
 
 function loadSavedConfig() {
@@ -65,6 +80,8 @@ function getConfig() {
     };
 }
 
+let searchIntervalId = null;
+
 async function searchProducts() {
     const retailer = document.getElementById('retailer').value;
     const query = document.getElementById('searchQuery').value.trim();
@@ -81,8 +98,20 @@ async function searchProducts() {
     document.getElementById('results').innerHTML = '';
     currentResults = [];
 
+    await runSearch(retailer, query, config);
+
+    if (searchIntervalId) {
+        clearInterval(searchIntervalId);
+    }
+    searchIntervalId = setInterval(() => runSearch(retailer, query, config), 10000);
+}
+
+async function runSearch(retailer, query, config) {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').innerHTML = '';
+    currentResults = [];
+
     try {
-        // Step 1: Scrape retail products
         console.log('Scraping products...');
         const products = await scraper.scrapeProducts(retailer, query);
 
@@ -91,19 +120,13 @@ async function searchProducts() {
             return;
         }
 
-        // Step 2: Analyze each product
         console.log(`Analyzing ${products.length} products...`);
         const analyzedProducts = [];
 
         for (const product of products) {
             try {
-                // Get Amazon analytics
                 const analytics = await amazonAnalyzer.analyzeProduct(product.asin);
-                
-                // Validate against SOP
                 const sopValidation = amazonAnalyzer.validateSOP(product, analytics, config);
-                
-                // Get LLM analysis
                 const llmAnalysis = await llmAnalyzer.analyzeProductSuitability(product, analytics);
 
                 analyzedProducts.push({
