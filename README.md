@@ -51,7 +51,7 @@ SKIP_PLAYWRIGHT=1 ./install.sh
 
 3. **Start the application**
 ```bash
-npm start
+USE_PLAYWRIGHT=true WALMART_USE_PLAYWRIGHT=true PLAYWRIGHT_HEADLESS=false PLAYWRIGHT_PERSISTENT=true npm run dev
 ```
 
 4. **Open your browser**
