@@ -44,9 +44,9 @@ cd Retail-Arb-Scraper
 ```bash
 ./install.sh
 ```
-To skip Playwright browser downloads:
+To skip Playwright browser downloads (Not reccomended):
 ```bash
-SKIP_PLAYWRIGHT=1 ./install.sh //Not reccomended
+SKIP_PLAYWRIGHT=1 ./install.sh
 ```
 
 3. **Start the application**
