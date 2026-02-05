@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Update Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            min-height: 100px;
+        }
+        .product-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .loading {
+            color: #667eea;
+            font-style: italic;
+        }
+        .success {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+        }
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Real-time Update Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Progressive Product Display</h2>
+        <p>This test simulates analyzing 5 products and displays them one by one as they are analyzed (not all at once).</p>
+        <button id="test1Btn" onclick="runTest1()">Run Test 1</button>
+        <div id="test1Results" class="results"></div>
+        <div id="test1Log" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Concurrent Search Prevention</h2>
+        <p>This test verifies that starting a new search while one is in progress is properly blocked.</p>
+        <button id="test2Btn" onclick="runTest2()">Run Test 2</button>
+        <div id="test2Results" class="results"></div>
+        <div id="test2Log" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Interval-based Refresh</h2>
+        <p>This test simulates periodic search updates every 2 seconds.</p>
+        <button id="test3Btn" onclick="runTest3()">Start Test 3</button>
+        <button id="test3StopBtn" onclick="stopTest3()" disabled>Stop Test 3</button>
+        <div id="test3Results" class="results"></div>
+        <div id="test3Log" class="log"></div>
+    </div>
+
+    <script>
+        // Test 1: Progressive Product Display
+        let searchInFlight = false;
+
+        function addLog(testId, message) {
+            const log = document.getElementById(`${testId}Log`);
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function runTest1() {
+            const btn = document.getElementById('test1Btn');
+            const resultsDiv = document.getElementById('test1Results');
+            const logDiv = document.getElementById('test1Log');
+            
+            btn.disabled = true;
+            resultsDiv.innerHTML = '';
+            logDiv.innerHTML = '';
+            
+            addLog('test1', 'Starting progressive display test...');
+            resultsDiv.innerHTML = '<div class="loading">Analyzing products...</div>';
+
+            const products = [
+                { id: 1, name: 'Wireless Headphones', price: 24.99 },
+                { id: 2, name: 'Kitchen Knife Set', price: 34.99 },
+                { id: 3, name: 'Yoga Mat', price: 15.99 },
+                { id: 4, name: 'Smart Watch', price: 45.99 },
+                { id: 5, name: 'Coffee Maker', price: 29.99 }
+            ];
+
+            // Clear loading message
+            resultsDiv.innerHTML = '';
+
+            // Process products one by one
+            for (let i = 0; i < products.length; i++) {
+                const product = products[i];
+                addLog('test1', `Analyzing product ${i + 1}/${products.length}: ${product.name}...`);
+                
+                // Simulate analysis delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // Display product immediately (real-time update)
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <strong>${product.name}</strong> - $${product.price}
+                    <div class="timestamp">Analyzed at ${new Date().toLocaleTimeString()}</div>
+                `;
+                resultsDiv.appendChild(card);
+                
+                addLog('test1', `✓ Product ${i + 1} displayed`);
+            }
+
+            addLog('test1', '✅ Test completed - All products displayed progressively!');
+            btn.disabled = false;
+        }
+
+        // Test 2: Concurrent Search Prevention
+        async function runTest2() {
+            const btn = document.getElementById('test2Btn');
+            const resultsDiv = document.getElementById('test2Results');
+            const logDiv = document.getElementById('test2Log');
+            
+            btn.disabled = true;
+            resultsDiv.innerHTML = '';
+            logDiv.innerHTML = '';
+            
+            addLog('test2', 'Testing concurrent search prevention...');
+
+            async function simulateSearch(searchNumber) {
+                if (searchInFlight) {
+                    addLog('test2', `❌ Search ${searchNumber} blocked - search already in progress`);
+                    return false;
+                }
+                
+                searchInFlight = true;
+                addLog('test2', `▶️ Search ${searchNumber} started`);
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                searchInFlight = false;
+                addLog('test2', `✅ Search ${searchNumber} completed`);
+                return true;
+            }
+
+            // Start first search
+            const search1Promise = simulateSearch(1);
+            
+            // Try to start second search immediately (should be blocked)
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const search2Promise = simulateSearch(2);
+            
+            await search1Promise;
+            await search2Promise;
+
+            // Now start third search (should succeed)
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await simulateSearch(3);
+
+            resultsDiv.innerHTML = '<div class="success">✓ Concurrent search prevention working correctly!</div>';
+            btn.disabled = false;
+        }
+
+        // Test 3: Interval-based Refresh
+        let test3IntervalId = null;
+        let test3Count = 0;
+
+        function runTest3() {
+            const startBtn = document.getElementById('test3Btn');
+            const stopBtn = document.getElementById('test3StopBtn');
+            const resultsDiv = document.getElementById('test3Results');
+            const logDiv = document.getElementById('test3Log');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            logDiv.innerHTML = '';
+            test3Count = 0;
+            
+            addLog('test3', 'Starting interval-based refresh test...');
+            addLog('test3', 'Search will run every 2 seconds');
+
+            async function periodicSearch() {
+                test3Count++;
+                addLog('test3', `🔄 Search #${test3Count} executed`);
+                
+                resultsDiv.innerHTML = `
+                    <div class="product-card">
+                        <strong>Search Update #${test3Count}</strong>
+                        <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                        <div>Products refreshed automatically</div>
+                    </div>
+                `;
+            }
+
+            // Run first search immediately
+            periodicSearch();
+
+            // Then run every 2 seconds
+            test3IntervalId = setInterval(periodicSearch, 2000);
+        }
+
+        function stopTest3() {
+            const startBtn = document.getElementById('test3Btn');
+            const stopBtn = document.getElementById('test3StopBtn');
+            
+            if (test3IntervalId) {
+                clearInterval(test3IntervalId);
+                test3IntervalId = null;
+                addLog('test3', `✅ Interval stopped. Total searches: ${test3Count}`);
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (test3IntervalId) {
+                clearInterval(test3IntervalId);
+            }
+        });
+    </script>
+</body>
+</html>

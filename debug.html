@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Search Function</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .log { background: #252526; padding: 10px; margin: 5px 0; border-left: 3px solid #007acc; }
+        .error { border-left-color: #f44336; }
+        .success { border-left-color: #4caf50; }
+        button { padding: 10px 20px; margin: 10px 5px; font-size: 16px; cursor: pointer; }
+        #output { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Search Function Debug</h1>
+    
+    <div>
+        <input type="text" id="testQuery" value="yoga mat" style="padding: 10px; width: 300px;">
+        <button onclick="testSearch()">Test Search Function</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script src="scraper.js"></script>
+    <script src="amazon-analyzer.js"></script>
+    <script src="llm-analyzer.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            output.innerHTML = '';
+        }
+
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log('ERROR: ' + args.join(' '), 'error');
+        };
+
+        async function testSearch() {
+            log('=== Starting Manual Test ===', 'log');
+            
+            try {
+                // Check if classes exist
+                log('Checking if RetailScraper exists: ' + (typeof RetailScraper !== 'undefined'), 'log');
+                log('Checking if AmazonAnalyzer exists: ' + (typeof AmazonAnalyzer !== 'undefined'), 'log');
+                log('Checking if LLMAnalyzer exists: ' + (typeof LLMAnalyzer !== 'undefined'), 'log');
+                
+                // Check if searchProducts function exists
+                log('Checking if searchProducts exists: ' + (typeof searchProducts !== 'undefined'), 'log');
+                
+                // Create instances
+                const scraper = new RetailScraper();
+                const amazonAnalyzer = new AmazonAnalyzer();
+                const llmAnalyzer = new LLMAnalyzer('');
+                
+                log('✓ All classes instantiated successfully', 'success');
+                
+                // Test scraper
+                log('Testing scraper.scrapeProducts("walmart", "yoga mat")...', 'log');
+                const products = await scraper.scrapeProducts('walmart', 'yoga mat');
+                log(`✓ Scraper returned ${products.length} products`, 'success');
+                log('Products: ' + JSON.stringify(products, null, 2), 'log');
+                
+                // Test Amazon analyzer
+                if (products.length > 0) {
+                    log('Testing amazonAnalyzer.analyzeProduct("' + products[0].asin + '")...', 'log');
+                    const analytics = await amazonAnalyzer.analyzeProduct(products[0].asin);
+                    log('✓ Amazon analyzer returned data', 'success');
+                    log('Analytics: ' + JSON.stringify(analytics, null, 2), 'log');
+                }
+                
+                log('=== Test Complete ===', 'success');
+                
+            } catch (error) {
+                log('FATAL ERROR: ' + error.message, 'error');
+                log('Stack: ' + error.stack, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            log('Page loaded successfully', 'success');
+            log('Ready to test...', 'log');
+        };
+    </script>
+</body>
+</html>

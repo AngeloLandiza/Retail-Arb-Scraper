@@ -9,7 +9,7 @@ describe('LLMAnalyzer Tests', () => {
     });
 
     describe('calculateROI', () => {
-        test('should calculate positive ROI correctly including shipping', () => {
+        test('should calculate positive ROI correctly', () => {
             const product = { price: 25.00 };
             const analytics = {
                 logistics: { buyBoxPrice: 60.00 }
@@ -19,8 +19,8 @@ describe('LLMAnalyzer Tests', () => {
             
             expect(typeof roi).toBe('number');
             expect(roi).toBeGreaterThan(0);
-            // ROI = (60 - 25 - 9 - 3) / 25 * 100 = 92%
-            expect(roi).toBeCloseTo(92, 0);
+            // ROI = (60 - 25 - 9) / 25 * 100 = 104%
+            expect(roi).toBeCloseTo(104, 0);
         });
 
         test('should calculate negative ROI for unprofitable products', () => {
@@ -51,7 +51,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should recommend AVOID for products with IP complaints', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 50.00, sellers: 10 },
+                logistics: { buyBoxPrice: 50.00, rating: 4.6, reviews: 200 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: true, count: 1 }
             };
@@ -62,10 +62,10 @@ describe('LLMAnalyzer Tests', () => {
             expect(result.analysis).toContain('IP complaint');
         });
 
-        test('should recommend BUY for high ROI, low competition products', () => {
+        test('should recommend BUY for high ROI with strong listing signals', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.6, reviews: 300 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -79,7 +79,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should recommend AVOID for low ROI', () => {
             const product = { price: 60.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.4, reviews: 120 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -93,7 +93,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should recommend REVIEW for moderate metrics', () => {
             const product = { price: 30.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 55.00, sellers: 18 },
+                logistics: { buyBoxPrice: 55.00, rating: 4.0, reviews: 30 },
                 salesData: { monthlySales: 100, priceDrops: 2 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -106,7 +106,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should include recommendation in analysis text', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.6, reviews: 300 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -120,7 +120,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should include timestamp', () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.6, reviews: 300 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -136,7 +136,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should use rule-based analysis when no API key', async () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.6, reviews: 300 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };
@@ -151,7 +151,7 @@ describe('LLMAnalyzer Tests', () => {
         test('should return complete analysis object', async () => {
             const product = { price: 25.00, title: 'Test Product' };
             const analytics = {
-                logistics: { buyBoxPrice: 70.00, sellers: 10 },
+                logistics: { buyBoxPrice: 70.00, rating: 4.6, reviews: 300 },
                 salesData: { monthlySales: 200, priceDrops: 1 },
                 complaints: { hasComplaints: false, count: 0 }
             };

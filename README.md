@@ -11,16 +11,14 @@ A **100% FREE** local tool for finding profitable retail arbitrage opportunities
 
 ### Product Analysis
 - Scrape clearance/sale items from Walmart, Walgreens, and Target
-- Automatic ASIN matching to Amazon products
+- Automatic Amazon matching by title (no paid APIs)
 - Real-time price comparison and ROI calculation
-- Sales rank and estimated monthly sales
-- Seller competition analysis
+- Amazon price, rating, and review count (when available)
 
 ### Smart Filtering (SOP)
 - **Minimum Price Filter**: Set minimum product price thresholds
 - **Monthly Sales Requirements**: Filter by minimum sales velocity
 - **ROI Thresholds**: Only show products meeting minimum ROI requirements
-- **Seller Competition Limits**: Avoid oversaturated markets
 
 ### Intelligent Analysis
 - **Rule-Based Analysis**: Built-in intelligent recommendation system (FREE)
@@ -46,6 +44,10 @@ cd Retail-Arb-Scraper
 ```bash
 ./install.sh
 ```
+To skip Playwright browser downloads:
+```bash
+SKIP_PLAYWRIGHT=1 ./install.sh
+```
 
 3. **Start the application**
 ```bash
@@ -64,7 +66,6 @@ Set your Standard Operating Procedure:
 - **Minimum Price**: Lowest price you're willing to source (default: $10)
 - **Min Monthly Sales**: Minimum monthly sales volume required (default: 50)
 - **Minimum ROI**: Required return on investment percentage (default: 30%)
-- **Max Sellers**: Maximum number of competing sellers (default: 20)
 
 ### 2. Search Products
 1. Select a retailer (Walmart, Walgreens, or Target)
@@ -75,7 +76,7 @@ Set your Standard Operating Procedure:
 Each product card shows:
 - **Pricing**: Buy price vs Amazon price vs profit
 - **ROI**: Return on investment percentage
-- **Amazon Data**: Sellers, sales rank, estimated monthly sales
+- **Amazon Data**: Rating, reviews, sales rank (when available)
 - **Analysis**: Intelligent recommendation with reasoning
 - **SOP Status**: Whether product meets your criteria
 
@@ -90,20 +91,20 @@ Color coding:
 
 This tool uses FREE methods instead of paid APIs:
 
-1. **Amazon Data** (replaces Keepa API - €15/month):
-   - Uses Best Seller Rank (BSR) to estimate monthly sales
-   - Mock data for demonstration (real scraping requires additional setup)
-   - No API costs
+1. **Retailer Data**:
+   - Scrapes live HTML/JSON state from Walmart, Target, and Walgreens
+   - No API keys, no paid services
 
-2. **Sales Estimation** (replaces SellerAmp API):
-   - BSR-to-sales conversion formula (approximate)
-   - Category-based adjustments
-   - Free estimation (not exact, but useful for analysis)
+2. **Amazon Data** (free lookup):
+   - Matches products by title against Amazon search results
+   - Uses price-aware matching and type heuristics to avoid bundle/console mismatches
+   - Pulls price, rating, and review count when available
+   - No Keepa/SellerAmp/PA-API required
 
 3. **Product Analysis** (optional LLM):
    - Built-in rule-based analysis (100% FREE)
    - Optional: OpenRouter API for AI analysis (has free tier)
-   - Works perfectly without any API keys
+   - Works without any API keys
 
 ### Architecture
 
@@ -133,16 +134,16 @@ Retail-Arb-Scraper/
 
 **Analysis Algorithm:**
 ```javascript
-✓ ROI >= 30% AND Sellers <= 15 = BUY
-✓ ROI < 20% OR High Competition = AVOID
+✓ ROI >= 30% AND solid listing signals = BUY
+✓ ROI < 20% = AVOID
 ✓ Moderate metrics = REVIEW
 ✗ IP Complaints = AVOID (always)
 ```
 
 **Current Implementation:**
-- Demo uses mock product data for legal/ethical demonstration
-- To get real data, you'll need to add scraping (check retailer ToS)
-- Or integrate with authorized APIs (Amazon Product Advertising API requires seller account)
+- Uses live scraping by default (no mock/sample data)
+- Some Amazon metrics (sales rank, monthly sales) are not available for free and show as N/A
+- Retailers may rate-limit or block scraping; try different queries or wait and retry
 
 ## 💡 Optional Enhancements
 
@@ -152,28 +153,6 @@ For AI-powered insights, get a free API key from [OpenRouter](https://openrouter
 2. Get your free API key
 3. Enter it in the "Optional Features" section
 4. Enjoy AI-powered product analysis (still free!)
-
-### Production Scraping
-
-**Important Note**: The current version uses mock/sample data for demonstration purposes.
-
-To scrape real retailer data, you'll need to:
-1. **Use Browser Automation**: Puppeteer/Playwright
-2. **Build Browser Extension**: Chrome/Firefox extension
-3. **Deploy Proxy Server**: Handle CORS restrictions
-
-Example (add to server.js):
-```javascript
-const puppeteer = require('puppeteer');
-
-async function scrapeWalmart(query) {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  await page.goto(`https://www.walmart.com/search?q=${query}`);
-  // Extract product data
-  await browser.close();
-}
-```
 
 ## 📊 Performance
 
@@ -201,6 +180,12 @@ PORT=3001 npm start
 Make sure Node.js v18+ is installed:
 ```bash
 node --version  # Should be v18 or higher
+```
+
+### Playwright Not Installed (Walmart/Target Captcha)
+If you see "Playwright not installed for fallback":
+```bash
+npx playwright install
 ```
 
 ### Permission Denied

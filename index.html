@@ -28,10 +28,6 @@
                     <label for="minROI">Minimum ROI (%):</label>
                     <input type="number" id="minROI" value="30" min="0" step="1">
                 </div>
-                <div class="config-item">
-                    <label for="maxSellers">Max Sellers:</label>
-                    <input type="number" id="maxSellers" value="20" min="0">
-                </div>
             </div>
             
             <div class="api-config">
@@ -60,13 +56,57 @@
                     <option value="target">Target</option>
                 </select>
                 <input type="text" id="searchQuery" placeholder="Enter product search term or URL">
-                <button id="searchBtn" onclick="searchProducts()">Search</button>
+                <button id="searchBtn">Search</button>
+            </div>
+            
+            <!-- Filter and export controls -->
+            <div class="filter-section" style="display: none;" id="filterSection">
+                <h3>Filter Results</h3>
+                <div class="filter-controls">
+                    <div>
+                        <label>Sort by:</label>
+                        <select id="sortBy" onchange="applyFilters()">
+                            <option value="roi">ROI (Highest First)</option>
+                            <option value="profit">Profit (Highest First)</option>
+                            <option value="price">Price (Lowest First)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Min Profit:</label>
+                        <input type="number" id="minProfit" value="0" onchange="applyFilters()">
+                    </div>
+                    <div>
+                        <label>Recommendation:</label>
+                        <select id="filterRec" onchange="applyFilters()">
+                            <option value="">All</option>
+                            <option value="BUY">Buy Only</option>
+                            <option value="REVIEW">Review Only</option>
+                            <option value="AVOID">Show Avoided</option>
+                        </select>
+                    </div>
+                    <button onclick="exportResults()" class="export-btn">📥 Export CSV</button>
+                </div>
             </div>
         </div>
 
         <div id="loading" class="loading" style="display: none;">
             <div class="spinner"></div>
-            <p>Searching and analyzing products...</p>
+            <p id="loadingText">Searching and analyzing products...</p>
+            <div id="statusMessages" style="margin-top: 15px; font-size: 0.9em; color: #666; max-width: 500px;">
+            </div>
+        </div>
+
+        <!-- Pagination controls -->
+        <div id="paginationControls" class="pagination-controls" style="display: none;">
+            <button onclick="previousPage()">← Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button onclick="nextPage()">Next →</button>
+            <select id="itemsPerPage" onchange="changePageSize()">
+                <option value="5">5 per page</option>
+                <option value="10" selected>10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
+            </select>
         </div>
 
         <div id="results" class="results-section">

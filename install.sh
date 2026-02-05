@@ -33,6 +33,14 @@ echo "📦 Installing dependencies..."
 npm install
 
 if [ $? -eq 0 ]; then
+    if [ -z "$SKIP_PLAYWRIGHT" ]; then
+        echo ""
+        echo "🎭 Installing Playwright browsers (optional but recommended)..."
+        npx playwright install
+    else
+        echo ""
+        echo "⏭️  Skipping Playwright browser install (SKIP_PLAYWRIGHT=1)"
+    fi
     echo ""
     echo "============================================"
     echo "  ✓ Installation Complete!"

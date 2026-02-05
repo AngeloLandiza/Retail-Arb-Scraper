@@ -6,22 +6,22 @@ class LLMAnalyzer {
         this.apiKey = apiKey;
         this.apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
         this.model = 'meta-llama/llama-3.2-3b-instruct:free'; // Free model (if API key provided)
-        
+
         this.systemPrompt = `You are an expert retail arbitrage analyst specializing in evaluating products for resale potential on Amazon. 
 
 Your role is to analyze product data including:
 - Pricing information (retail vs Amazon)
 - Sales velocity and demand
-- Competition levels (number of sellers)
+- Amazon listing quality (rating/reviews when available)
 - Price history and trends
 - IP/trademark complaints
 - Profit margins and ROI
 
 Provide concise, actionable recommendations on whether a product is suitable for resale. Consider:
 1. Profit potential and ROI
-2. Market saturation (too many sellers = avoid)
-3. Legal/IP risks (complaints = avoid)
-4. Demand stability (consistent sales = good)
+2. Legal/IP risks (complaints = avoid)
+3. Demand stability (consistent sales = good)
+4. Listing health (strong ratings/reviews = good)
 5. Price volatility (stable prices = good)
 
 Format your response as:
@@ -40,8 +40,6 @@ Be direct and business-focused.`;
      * @returns {Promise<object>} Analysis and recommendation
      */
     async analyzeProductSuitability(product, analytics) {
-        // Use rule-based analysis (free, no API needed)
-        // This provides reliable recommendations without external dependencies
         if (!this.apiKey) {
             return this.getRuleBasedAnalysis(product, analytics);
         }
@@ -61,29 +59,31 @@ Be direct and business-focused.`;
      */
     formatProductData(product, analytics) {
         const roi = this.calculateROI(product, analytics);
-        
+        const salesData = analytics.salesData || {};
+        const logistics = analytics.logistics || {};
+
         return `Product: ${product.title}
 Retail Price: $${product.price}
-Amazon Buy Box Price: $${analytics.logistics.buyBoxPrice}
+Amazon Buy Box Price: $${logistics.buyBoxPrice || 'Unknown'}
 Estimated ROI: ${roi}%
 
 Sales Data:
-- Monthly Sales: ${analytics.salesData.monthlySales} units
-- Sales Rank: ${analytics.salesData.salesRank}
-- Category: ${analytics.salesData.category}
+- Monthly Sales: ${salesData.monthlySales ?? 'Unknown'} units
+- Sales Rank: ${salesData.salesRank ?? 'Unknown'}
+- Category: ${salesData.category || 'Unknown'}
 
-Competition:
-- Total Sellers: ${analytics.logistics.sellers}
-- FBA Sellers: ${analytics.logistics.fbaOffers}
+Listing Signals:
+- Rating: ${logistics.rating ?? 'Unknown'}
+- Reviews: ${logistics.reviews ?? 'Unknown'}
 
 Price History (360 days):
-- Average Price: $${analytics.salesData.avgPrice360Days}
-- Lowest: $${analytics.salesData.lowestPrice360Days}
-- Highest: $${analytics.salesData.highestPrice360Days}
-- Price Drops: ${analytics.salesData.priceDrops}
+- Average Price: $${salesData.avgPrice360Days ?? 'Unknown'}
+- Lowest: $${salesData.lowestPrice360Days ?? 'Unknown'}
+- Highest: $${salesData.highestPrice360Days ?? 'Unknown'}
+- Price Drops: ${salesData.priceDrops ?? 'Unknown'}
 
-IP Complaints: ${analytics.complaints.hasComplaints ? `YES (${analytics.complaints.count} complaints)` : 'None'}
-${analytics.complaints.details.length > 0 ? `Details: ${analytics.complaints.details.join(', ')}` : ''}
+IP Complaints: ${analytics.complaints?.hasComplaints === null ? 'Unknown' : analytics.complaints?.hasComplaints ? `YES (${analytics.complaints.count} complaints)` : 'None'}
+${analytics.complaints?.details?.length ? `Details: ${analytics.complaints.details.join(', ')}` : ''}
 
 Analyze this product for resale suitability.`;
     }
@@ -123,7 +123,6 @@ Analyze this product for resale suitability.`;
      * Parse LLM response
      */
     parseResponse(responseText) {
-        // Extract recommendation
         let recommendation = 'REVIEW';
         if (responseText.toUpperCase().includes('RECOMMENDATION: BUY')) {
             recommendation = 'BUY';
@@ -146,48 +145,38 @@ Analyze this product for resale suitability.`;
      */
     getRuleBasedAnalysis(product, analytics) {
         const roi = this.calculateROI(product, analytics);
-        const hasIPComplaints = analytics.complaints.hasComplaints;
-        const highCompetition = analytics.logistics.sellers > 15;
-        const lowSales = analytics.salesData.monthlySales < 150;
-        
-        let recommendation = 'BUY';
+        const sales = analytics.salesData?.monthlySales ?? null;
+        const rating = analytics.logistics?.rating ?? null;
+        const reviews = analytics.logistics?.reviews ?? null;
+        const hasIPComplaints = analytics.complaints?.hasComplaints;
+
+        let recommendation = 'REVIEW';
         let analysis = '';
 
-        if (hasIPComplaints) {
+        const hasUnknowns =
+            sales === null ||
+            hasIPComplaints === null ||
+            analytics.logistics?.buyBoxPrice === null ||
+            analytics.logistics?.buyBoxPrice === 0;
+
+        if (hasIPComplaints === true) {
             recommendation = 'AVOID';
-            analysis = `This product has ${analytics.complaints.count} IP complaint(s), which poses significant legal risk. The ${roi}% ROI is not worth the potential account suspension. Even with ${analytics.salesData.monthlySales} monthly sales, intellectual property issues make this unsuitable for resale.
-
-Recommendation: AVOID
-
-Key Risk: IP complaints could result in Amazon account suspension and inventory seizure.`;
-        } else if (roi < 20) {
+            analysis = `This product has IP complaints, which poses significant legal risk. The ${roi}% ROI is not worth the potential account suspension. Recommendation: AVOID\n\nKey Risk: IP complaints could result in Amazon account suspension and inventory seizure.`;
+        } else if (roi < 20 && analytics.logistics?.buyBoxPrice > 0) {
             recommendation = 'AVOID';
-            analysis = `Low profit margin of ${roi}% ROI makes this product financially unviable. With ${analytics.logistics.sellers} sellers competing and only ${analytics.salesData.monthlySales} monthly sales, the market is saturated. Price volatility (${analytics.salesData.priceDrops} drops in 360 days) adds additional risk.
-
-Recommendation: AVOID
-
-Key Risk: Insufficient profit margin with high competition may lead to losses.`;
-        } else if (highCompetition && lowSales) {
+            analysis = `Low profit margin of ${roi}% ROI makes this product financially unviable. Recommendation: AVOID\n\nKey Risk: Insufficient profit margin may lead to losses.`;
+        } else if (hasUnknowns) {
             recommendation = 'REVIEW';
-            analysis = `Moderate ROI of ${roi}% but concerning competition levels (${analytics.logistics.sellers} sellers). Monthly sales of ${analytics.salesData.monthlySales} units may not support all sellers. Price has been relatively stable, which is positive. Consider if you can win the buy box.
-
-Recommendation: REVIEW
-
-Key Consideration: High seller count may make it difficult to maintain consistent sales velocity.`;
-        } else if (roi >= 30 && !highCompetition) {
+            analysis = `Limited Amazon data available for this product. Estimated ROI is ${roi}%. Recommendation: REVIEW\n\nKey Consideration: Validate listing quality, sales velocity, and IP status before purchasing.`;
+        } else if (roi >= 30 && (rating === null || rating >= 4.2) && (reviews === null || reviews >= 50)) {
             recommendation = 'BUY';
-            analysis = `Strong opportunity with ${roi}% ROI and manageable competition (${analytics.logistics.sellers} sellers). Healthy monthly sales of ${analytics.salesData.monthlySales} units indicate consistent demand. Price stability over 360 days suggests predictable margins. Good FBA seller ratio indicates successful FBA model.
-
-Recommendation: BUY
-
-Key Opportunity: High ROI with low competition and stable demand makes this an excellent arbitrage opportunity.`;
+            analysis = `Strong opportunity with ${roi}% ROI and healthy Amazon listing signals. Recommendation: BUY\n\nKey Opportunity: High ROI with solid ratings/reviews and stable demand.`;
+        } else if (sales !== null && sales < 150) {
+            recommendation = 'REVIEW';
+            analysis = `Moderate ROI of ${roi}% but low monthly sales (${sales}). Recommendation: REVIEW\n\nKey Consideration: Sales velocity may not justify inventory risk.`;
         } else {
             recommendation = 'REVIEW';
-            analysis = `Decent ${roi}% ROI with ${analytics.salesData.monthlySales} monthly sales. Competition level of ${analytics.logistics.sellers} sellers is moderate. Price history shows ${analytics.salesData.priceDrops} drops, suggesting some volatility. Worth deeper analysis of buy box dynamics.
-
-Recommendation: REVIEW
-
-Key Consideration: Moderate metrics suggest potential but requires careful inventory management and pricing strategy.`;
+            analysis = `Decent ${roi}% ROI with limited signals. Recommendation: REVIEW\n\nKey Consideration: Verify buy box stability and listing health before buying.`;
         }
 
         return {
@@ -198,42 +187,16 @@ Key Consideration: Moderate metrics suggest potential but requires careful inven
     }
 
     /**
-     * Calculate ROI
+     * Calculate ROI percentage
      */
     calculateROI(product, analytics) {
-        const buyPrice = product.price;
-        const sellPrice = analytics.logistics.buyBoxPrice;
-        const fees = sellPrice * 0.15; // Estimate 15% Amazon fees
-        const shipping = 3.00; // Estimate shipping cost
-        const profit = sellPrice - buyPrice - fees - shipping;
+        const buyPrice = product.price || 0;
+        const sellPrice = analytics.logistics?.buyBoxPrice || 0;
+        const fees = sellPrice * 0.15; // Estimate 15% fees
+        const profit = sellPrice - buyPrice - fees;
+        if (buyPrice <= 0) return 0;
         const roi = (profit / buyPrice) * 100;
         return Math.round(roi * 10) / 10;
-    }
-
-    /**
-     * Batch analyze multiple products
-     */
-    async batchAnalyze(productsWithAnalytics) {
-        const results = [];
-        
-        // Process in batches to avoid rate limits
-        for (const item of productsWithAnalytics) {
-            const analysis = await this.analyzeProductSuitability(item.product, item.analytics);
-            results.push({
-                product: item.product,
-                analytics: item.analytics,
-                llmAnalysis: analysis
-            });
-            
-            // Add delay to respect rate limits
-            await this.delay(500);
-        }
-        
-        return results;
-    }
-
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

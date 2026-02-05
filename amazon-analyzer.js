@@ -1,4 +1,4 @@
-// amazon-analyzer.js - Amazon logistics and analytics
+// amazon-analyzer.js - Amazon listing analytics (live, free scraping)
 
 class AmazonAnalyzer {
     constructor() {
@@ -7,184 +7,130 @@ class AmazonAnalyzer {
 
     /**
      * Get comprehensive Amazon product analytics
-     * @param {string} asin - Amazon ASIN
+     * @param {object|string} productOrAsin - Product object or Amazon ASIN
      * @returns {Promise<object>} Product analytics
      */
-    async analyzeProduct(asin) {
+    async analyzeProduct(productOrAsin) {
+        const product = typeof productOrAsin === 'string'
+            ? { asin: productOrAsin }
+            : (productOrAsin || {});
+
         const [logistics, salesData, complaints] = await Promise.all([
-            this.getProductLogistics(asin),
-            this.getSalesData(asin),
-            this.getIPComplaints(asin)
+            this.getProductLogistics(product),
+            this.getSalesData(product),
+            this.getIPComplaints(product)
         ]);
 
         return {
-            asin: asin,
-            logistics: logistics,
-            salesData: salesData,
-            complaints: complaints,
+            asin: logistics.asin || product.asin || null,
+            logistics,
+            salesData,
+            complaints,
             score: this.calculateScore(logistics, salesData, complaints)
         };
     }
 
     /**
-     * Get product logistics (sellers, competition, etc.)
-     * @param {string} asin - Amazon ASIN
+     * Get product listing data (price, rating, reviews)
+     * @param {object} product - Product with title or ASIN
      * @returns {Promise<object>} Logistics data
      */
-    async getProductLogistics(asin) {
-        // In production, use Amazon API or web scraping
-        await this.delay(400);
+    async getProductLogistics(product) {
+        const payload = product?.asin
+            ? { asin: product.asin }
+            : { query: product?.title || '' };
+        if (typeof product?.price === 'number') {
+            payload.price = product.price;
+        }
 
-        // Mock logistics data
-        const mockData = {
-            'B08ASIN001': { sellers: 12, fbaOffers: 8, fbmOffers: 4, buyBoxPrice: 59.99 },
-            'B08ASIN002': { sellers: 5, fbaOffers: 3, fbmOffers: 2, buyBoxPrice: 74.99 },
-            'B08ASIN003': { sellers: 18, fbaOffers: 15, fbmOffers: 3, buyBoxPrice: 34.99 },
-            'B08ASIN004': { sellers: 8, fbaOffers: 6, fbmOffers: 2, buyBoxPrice: 99.99 },
-            'B08ASIN005': { sellers: 15, fbaOffers: 10, fbmOffers: 5, buyBoxPrice: 54.99 }
-        };
+        if (!payload.asin && !payload.query) {
+            return {
+                asin: null,
+                buyBoxPrice: null,
+                rating: null,
+                reviews: null,
+                url: null
+            };
+        }
 
-        return mockData[asin] || { sellers: 0, fbaOffers: 0, fbmOffers: 0, buyBoxPrice: 0 };
+        try {
+            const response = await fetch('/api/amazon/lookup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            return {
+                asin: data.asin || payload.asin || null,
+                buyBoxPrice: typeof data.price === 'number' ? data.price : null,
+                rating: typeof data.rating === 'number' ? data.rating : null,
+                reviews: typeof data.reviews === 'number' ? data.reviews : null,
+                url: data.url || null
+            };
+        } catch (error) {
+            console.error('Error fetching Amazon data:', error);
+            return {
+                asin: payload.asin || null,
+                buyBoxPrice: null,
+                rating: null,
+                reviews: null,
+                url: null
+            };
+        }
     }
 
     /**
      * Get sales data - FREE alternative to Keepa API
-     * Uses Amazon Best Seller Rank to estimate sales
-     * @param {string} asin - Amazon ASIN
+     * Uses Amazon Best Seller Rank to estimate sales when available
+     * @param {object} product - Product data
      * @returns {Promise<object>} Sales and pricing data
      */
-    async getSalesData(asin) {
-        // Use free methods: BSR-to-sales estimation
-        // No paid API needed
-        await this.delay(500);
-
-        const mockSalesData = {
-            'B08ASIN001': {
-                monthlySales: 450,
-                avgPrice30Days: 62.99,
-                avgPrice90Days: 64.99,
-                avgPrice360Days: 67.99,
-                lowestPrice360Days: 54.99,
-                highestPrice360Days: 79.99,
-                salesRank: 15420,
-                category: 'Electronics',
-                priceDrops: 3,
-                priceHistory: this.generatePriceHistory(67.99, 54.99, 79.99)
-            },
-            'B08ASIN002': {
-                monthlySales: 180,
-                avgPrice30Days: 76.99,
-                avgPrice90Days: 78.99,
-                avgPrice360Days: 81.99,
-                lowestPrice360Days: 69.99,
-                highestPrice360Days: 94.99,
-                salesRank: 8234,
-                category: 'Kitchen',
-                priceDrops: 2,
-                priceHistory: this.generatePriceHistory(81.99, 69.99, 94.99)
-            },
-            'B08ASIN003': {
-                monthlySales: 320,
-                avgPrice30Days: 36.99,
-                avgPrice90Days: 37.99,
-                avgPrice360Days: 39.99,
-                lowestPrice360Days: 29.99,
-                highestPrice360Days: 44.99,
-                salesRank: 2156,
-                category: 'Sports',
-                priceDrops: 4,
-                priceHistory: this.generatePriceHistory(39.99, 29.99, 44.99)
-            },
-            'B08ASIN004': {
-                monthlySales: 520,
-                avgPrice30Days: 102.99,
-                avgPrice90Days: 105.99,
-                avgPrice360Days: 109.99,
-                lowestPrice360Days: 89.99,
-                highestPrice360Days: 139.99,
-                salesRank: 1842,
-                category: 'Electronics',
-                priceDrops: 5,
-                priceHistory: this.generatePriceHistory(109.99, 89.99, 139.99)
-            },
-            'B08ASIN005': {
-                monthlySales: 240,
-                avgPrice30Days: 56.99,
-                avgPrice90Days: 58.99,
-                avgPrice360Days: 61.99,
-                lowestPrice360Days: 49.99,
-                highestPrice360Days: 74.99,
-                salesRank: 5621,
-                category: 'Kitchen',
-                priceDrops: 3,
-                priceHistory: this.generatePriceHistory(61.99, 49.99, 74.99)
-            }
-        };
-
-        return mockSalesData[asin] || this.getDefaultSalesData();
-    }
-
-    /**
-     * Generate mock price history
-     */
-    generatePriceHistory(avg, low, high) {
-        const history = [];
-        const days = 360;
-        for (let i = 0; i < days; i += 30) {
-            const variance = (Math.random() - 0.5) * (high - low) * 0.3;
-            history.push({
-                date: new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                price: Math.max(low, Math.min(high, avg + variance))
-            });
-        }
-        return history;
+    async getSalesData(product) {
+        // No free reliable sales API; return unknown values
+        return this.getDefaultSalesData();
     }
 
     /**
      * Get IP (Intellectual Property) complaints data
-     * @param {string} asin - Amazon ASIN
      * @returns {Promise<object>} IP complaints information
      */
-    async getIPComplaints(asin) {
-        // In production, check databases or APIs for IP complaints
-        await this.delay(300);
-
-        // Mock IP complaints data
-        const mockComplaints = {
-            'B08ASIN001': { hasComplaints: false, count: 0, details: [] },
-            'B08ASIN002': { hasComplaints: false, count: 0, details: [] },
-            'B08ASIN003': { hasComplaints: false, count: 0, details: [] },
-            'B08ASIN004': { hasComplaints: true, count: 2, details: ['Trademark complaint filed 6 months ago'] },
-            'B08ASIN005': { hasComplaints: false, count: 0, details: [] }
-        };
-
-        return mockComplaints[asin] || { hasComplaints: false, count: 0, details: [] };
+    async getIPComplaints() {
+        // No free public IP complaints database available
+        return { hasComplaints: null, count: null, details: [] };
     }
 
     /**
      * Calculate product score based on various factors
      */
     calculateScore(logistics, salesData, complaints) {
-        let score = 100;
+        let score = 50; // Neutral base
 
-        // Deduct points for high competition
-        if (logistics.sellers > 15) score -= 20;
-        else if (logistics.sellers > 10) score -= 10;
-        else if (logistics.sellers > 5) score -= 5;
-
-        // Deduct points for low sales
-        if (salesData.monthlySales < 100) score -= 25;
-        else if (salesData.monthlySales < 200) score -= 15;
-        else if (salesData.monthlySales < 300) score -= 5;
-
-        // Deduct points for IP complaints
-        if (complaints.hasComplaints) {
-            score -= complaints.count * 15;
+        if (typeof salesData.monthlySales === 'number') {
+            if (salesData.monthlySales < 100) score -= 25;
+            else if (salesData.monthlySales < 200) score -= 15;
+            else if (salesData.monthlySales < 300) score -= 5;
         }
 
-        // Bonus for good FBA ratio
-        const fbaRatio = logistics.fbaOffers / Math.max(logistics.sellers, 1);
-        if (fbaRatio > 0.7) score += 10;
+        if (complaints.hasComplaints === true) {
+            score -= (complaints.count || 1) * 15;
+        }
+
+        if (typeof logistics.rating === 'number') {
+            if (logistics.rating >= 4.5) score += 5;
+            else if (logistics.rating < 3.8) score -= 10;
+        }
+        if (typeof logistics.reviews === 'number') {
+            if (logistics.reviews >= 500) score += 5;
+            else if (logistics.reviews < 20) score -= 5;
+        }
 
         return Math.max(0, Math.min(100, score));
     }
@@ -199,18 +145,24 @@ class AmazonAnalyzer {
     validateSOP(product, analytics, sop) {
         const checks = {
             minPrice: product.price >= (sop.minPrice || 0),
-            minMonthlySales: analytics.salesData.monthlySales >= (sop.minMonthlySales || 0),
-            maxSellers: analytics.logistics.sellers <= (sop.maxSellers || 999),
+            minMonthlySales:
+                typeof analytics.salesData.monthlySales === 'number'
+                    ? analytics.salesData.monthlySales >= (sop.minMonthlySales || 0)
+                    : null,
             minROI: this.calculateROI(product, analytics) >= (sop.minROI || 0),
-            noIPComplaints: !analytics.complaints.hasComplaints
+            noIPComplaints:
+                analytics.complaints.hasComplaints === null
+                    ? null
+                    : !analytics.complaints.hasComplaints
         };
 
-        const passed = Object.values(checks).every(check => check === true);
+        const passed = Object.values(checks).every(value => value !== false);
 
         return {
-            passed: passed,
-            checks: checks,
-            failedChecks: Object.keys(checks).filter(key => !checks[key])
+            passed,
+            checks,
+            failedChecks: Object.keys(checks).filter(key => checks[key] === false),
+            unknownChecks: Object.keys(checks).filter(key => checks[key] === null)
         };
     }
 
@@ -218,31 +170,28 @@ class AmazonAnalyzer {
      * Calculate ROI percentage
      */
     calculateROI(product, analytics) {
-        const buyPrice = product.price;
-        const sellPrice = analytics.logistics.buyBoxPrice;
+        const buyPrice = product.price || 0;
+        const sellPrice = analytics.logistics.buyBoxPrice || 0;
         const fees = sellPrice * 0.15; // Estimate 15% fees
         const profit = sellPrice - buyPrice - fees;
+        if (buyPrice <= 0) return 0;
         const roi = (profit / buyPrice) * 100;
         return Math.round(roi * 10) / 10;
     }
 
     getDefaultSalesData() {
         return {
-            monthlySales: 0,
-            avgPrice30Days: 0,
-            avgPrice90Days: 0,
-            avgPrice360Days: 0,
-            lowestPrice360Days: 0,
-            highestPrice360Days: 0,
-            salesRank: 999999,
+            monthlySales: null,
+            avgPrice30Days: null,
+            avgPrice90Days: null,
+            avgPrice360Days: null,
+            lowestPrice360Days: null,
+            highestPrice360Days: null,
+            salesRank: null,
             category: 'Unknown',
-            priceDrops: 0,
+            priceDrops: null,
             priceHistory: []
         };
-    }
-
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

@@ -5,8 +5,7 @@
   "sop": {
     "minPrice": 10,
     "minMonthlySales": 50,
-    "minROI": 30,
-    "maxSellers": 20
+    "minROI": 30
   },
   "apis": {
     "openrouter": {

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Search Test</title>
+    <style>
+        body { font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto; }
+        input, button, select { padding: 10px; font-size: 16px; margin: 5px; }
+        #status { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .loading { background: #fff3cd; border: 1px solid #ffc107; }
+        .success { background: #d4edda; border: 1px solid #28a745; }
+        .error { background: #f8d7da; border: 1px solid #dc3545; }
+        #results { margin-top: 20px; }
+        .product { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>Quick Search Test</h1>
+    
+    <div>
+        <select id="retailer">
+            <option value="walmart">Walmart</option>
+            <option value="walgreens">Walgreens</option>
+            <option value="target">Target</option>
+        </select>
+        <input type="text" id="query" placeholder="Enter search term" value="yoga mat">
+        <button onclick="doSearch()">Search Now</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        async function doSearch() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const retailer = document.getElementById('retailer').value;
+            const query = document.getElementById('query').value;
+
+            statusDiv.className = 'loading';
+            statusDiv.textContent = 'Searching...';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // Step 1: Scrape products
+                console.log(`Calling /api/scrape with retailer=${retailer}, query=${query}`);
+                const scrapeResponse = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ retailer, query })
+                });
+
+                if (!scrapeResponse.ok) {
+                    throw new Error(`Scrape API failed: ${scrapeResponse.status}`);
+                }
+
+                const scrapeData = await scrapeResponse.json();
+                console.log(`Got ${scrapeData.products.length} products:`, scrapeData.products);
+
+                if (scrapeData.products.length === 0) {
+                    statusDiv.className = '';
+                    statusDiv.textContent = 'No products found';
+                    return;
+                }
+
+                statusDiv.textContent = `Found ${scrapeData.products.length} products, analyzing...`;
+
+                // Step 2: Analyze each product
+                for (const product of scrapeData.products) {
+                    console.log(`Analyzing product: ${product.title}`);
+                    
+                    // Get Amazon data
+                    const amazonResponse = await fetch(`/api/amazon/${product.asin}`);
+                    if (!amazonResponse.ok) {
+                        console.error(`Amazon API failed for ${product.asin}`);
+                        continue;
+                    }
+                    
+                    const amazonData = await amazonResponse.json();
+                    console.log(`Amazon data for ${product.asin}:`, amazonData);
+
+                    // Display product
+                    const productDiv = document.createElement('div');
+                    productDiv.className = 'product';
+                    productDiv.innerHTML = `
+                        <h3>${product.title}</h3>
+                        <p><strong>Retailer:</strong> ${product.retailer}</p>
+                        <p><strong>Price:</strong> $${product.price} (was $${product.originalPrice})</p>
+                        <p><strong>Amazon Price:</strong> $${amazonData.price}</p>
+                        <p><strong>ASIN:</strong> ${product.asin}</p>
+                        <p><strong>Rating:</strong> ${amazonData.rating ?? 'N/A'}</p>
+                        <p><strong>Reviews:</strong> ${amazonData.reviews ?? 'N/A'}</p>
+                    `;
+                    resultsDiv.appendChild(productDiv);
+                }
+
+                statusDiv.className = 'success';
+                statusDiv.textContent = `✓ Analysis complete! Found ${scrapeData.products.length} products.`;
+
+            } catch (error) {
+                console.error('Search error:', error);
+                statusDiv.className = 'error';
+                statusDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

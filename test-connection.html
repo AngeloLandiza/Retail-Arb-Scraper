@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #5568d3; }
+        .success { color: #4caf50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        pre { 
+            background: #263238;
+            color: #aed581;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Server Connection Test</h1>
+    
+    <div class="test-box">
+        <h2>Test 1: Server Health Check</h2>
+        <button onclick="testServerHealth()">Test Server</button>
+        <div id="healthResult"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>Test 2: Scrape API</h2>
+        <button onclick="testScrapeAPI()">Test Scrape (Yoga Mat)</button>
+        <div id="scrapeResult"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>Test 3: Amazon API</h2>
+        <button onclick="testAmazonAPI()">Test Amazon (B08ASIN003)</button>
+        <div id="amazonResult"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>Console Logs</h2>
+        <div id="consoleLogs" class="log"></div>
+    </div>
+
+    <script>
+        function log(message, isError = false) {
+            const logDiv = document.getElementById('consoleLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = isError ? '#f44336' : '#333';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function testServerHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            log('Testing server health...');
+            
+            try {
+                const response = await fetch('/');
+                log(`Server responded with status: ${response.status}`);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '<p class="success">✓ Server is running!</p>';
+                    log('✓ Server health check passed');
+                } else {
+                    resultDiv.innerHTML = `<p class="error">✗ Server error: ${response.status}</p>`;
+                    log(`✗ Server returned status ${response.status}`, true);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">✗ Connection failed: ${error.message}</p>`;
+                log(`✗ Connection error: ${error.message}`, true);
+            }
+        }
+
+        async function testScrapeAPI() {
+            const resultDiv = document.getElementById('scrapeResult');
+            resultDiv.innerHTML = '<p>Testing scrape API...</p>';
+            log('Testing scrape API for "yoga mat" on walmart...');
+            
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ retailer: 'walmart', query: 'yoga mat' })
+                });
+                
+                log(`Scrape API responded with status: ${response.status}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                log(`✓ Received ${data.products.length} products`);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✓ Scrape API working!</p>
+                    <p>Found ${data.products.length} products</p>
+                    <pre>${JSON.stringify(data.products, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">✗ Error: ${error.message}</p>`;
+                log(`✗ Scrape API error: ${error.message}`, true);
+            }
+        }
+
+        async function testAmazonAPI() {
+            const resultDiv = document.getElementById('amazonResult');
+            resultDiv.innerHTML = '<p>Testing Amazon API...</p>';
+            log('Testing Amazon API for ASIN B08ASIN003...');
+            
+            try {
+                const response = await fetch('/api/amazon/B08ASIN003');
+                log(`Amazon API responded with status: ${response.status}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                log(`✓ Received Amazon data for ${data.asin}`);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✓ Amazon API working!</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">✗ Error: ${error.message}</p>`;
+                log(`✗ Amazon API error: ${error.message}`, true);
+            }
+        }
+
+        // Auto-run basic test on load
+        window.onload = () => {
+            log('Page loaded, testing server connection...');
+            testServerHealth();
+        };
+    </script>
+</body>
+</html>

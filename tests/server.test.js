@@ -1,19 +1,12 @@
-// server.test.js - Tests for Express server
-const request = require('supertest');
-const express = require('express');
-const cors = require('cors');
+// server.test.js - Tests for server handlers (no network)
 
 // Create test server instance
 function createTestServer() {
-    const app = express();
     const VALID_RETAILERS = ['walmart', 'walgreens', 'target'];
     const ASIN_REGEX = /^[A-Z0-9]{10}$/;
 
-    app.use(cors());
-    app.use(express.json());
-
-    // Mock Amazon endpoint
-    app.get('/api/amazon/:asin', async (req, res) => {
+    // Mock Amazon handler
+    const amazonHandler = async (req, res) => {
         const { asin } = req.params;
         
         if (!ASIN_REGEX.test(asin)) {
@@ -26,18 +19,16 @@ function createTestServer() {
             price: 50.00,
             salesRank: 10000,
             category: 'Test',
-            sellers: 10,
-            fbaOffers: 5,
             reviews: 100,
             rating: 4.5,
             inStock: true
         };
         
         res.json(mockData);
-    });
+    };
 
-    // Mock scrape endpoint
-    app.post('/api/scrape', async (req, res) => {
+    // Mock scrape handler
+    const scrapeHandler = async (req, res) => {
         const { retailer, query } = req.body;
         
         if (!VALID_RETAILERS.includes(retailer)) {
@@ -58,76 +49,88 @@ function createTestServer() {
         ];
         
         res.json({ products });
-    });
+    };
 
-    return app;
+    return { amazonHandler, scrapeHandler };
+}
+
+function makeRes() {
+    return {
+        statusCode: 200,
+        body: null,
+        status(code) {
+            this.statusCode = code;
+            return this;
+        },
+        json(payload) {
+            this.body = payload;
+            return this;
+        }
+    };
 }
 
 describe('Server API Tests', () => {
-    let app;
+    let handlers;
 
     beforeAll(() => {
-        app = createTestServer();
+        handlers = createTestServer();
     });
 
     describe('GET /api/amazon/:asin', () => {
         test('should return product data for valid ASIN', async () => {
-            const response = await request(app)
-                .get('/api/amazon/B08ASIN001')
-                .expect(200);
+            const res = makeRes();
+            await handlers.amazonHandler({ params: { asin: 'B08ASIN001' } }, res);
 
-            expect(response.body).toHaveProperty('asin', 'B08ASIN001');
-            expect(response.body).toHaveProperty('title');
-            expect(response.body).toHaveProperty('price');
-            expect(response.body).toHaveProperty('salesRank');
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toHaveProperty('asin', 'B08ASIN001');
+            expect(res.body).toHaveProperty('title');
+            expect(res.body).toHaveProperty('price');
+            expect(res.body).toHaveProperty('salesRank');
         });
 
         test('should return 400 for invalid ASIN format', async () => {
-            const response = await request(app)
-                .get('/api/amazon/invalid')
-                .expect(400);
+            const res = makeRes();
+            await handlers.amazonHandler({ params: { asin: 'invalid' } }, res);
 
-            expect(response.body).toHaveProperty('error', 'Invalid ASIN format');
+            expect(res.statusCode).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Invalid ASIN format');
         });
 
         test('should reject ASIN with special characters', async () => {
-            await request(app)
-                .get('/api/amazon/B08-ASIN01')
-                .expect(400);
+            const res = makeRes();
+            await handlers.amazonHandler({ params: { asin: 'B08-ASIN01' } }, res);
+            expect(res.statusCode).toBe(400);
         });
     });
 
     describe('POST /api/scrape', () => {
         test('should return products for valid retailer', async () => {
-            const response = await request(app)
-                .post('/api/scrape')
-                .send({ retailer: 'walmart', query: 'test' })
-                .expect(200);
+            const res = makeRes();
+            await handlers.scrapeHandler({ body: { retailer: 'walmart', query: 'test' } }, res);
 
-            expect(response.body).toHaveProperty('products');
-            expect(Array.isArray(response.body.products)).toBe(true);
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toHaveProperty('products');
+            expect(Array.isArray(res.body.products)).toBe(true);
         });
 
         test('should return 400 for invalid retailer', async () => {
-            const response = await request(app)
-                .post('/api/scrape')
-                .send({ retailer: 'invalid', query: 'test' })
-                .expect(400);
+            const res = makeRes();
+            await handlers.scrapeHandler({ body: { retailer: 'invalid', query: 'test' } }, res);
 
-            expect(response.body).toHaveProperty('error', 'Invalid retailer');
-            expect(response.body).toHaveProperty('validRetailers');
+            expect(res.statusCode).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Invalid retailer');
+            expect(res.body).toHaveProperty('validRetailers');
         });
 
         test('should accept all valid retailers', async () => {
             const retailers = ['walmart', 'walgreens', 'target'];
             
             for (const retailer of retailers) {
-                const response = await request(app)
-                    .post('/api/scrape')
-                    .send({ retailer, query: 'test' })
-                    .expect(200);
+                const res = makeRes();
+                await handlers.scrapeHandler({ body: { retailer, query: 'test' } }, res);
 
-                expect(response.body.products[0].retailer).toBe(retailer);
+                expect(res.statusCode).toBe(200);
+                expect(res.body.products[0].retailer).toBe(retailer);
             }
         });
     });

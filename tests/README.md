@@ -12,8 +12,11 @@ The test suite is built using **Jest** and **Supertest** to ensure the applicati
 - **server.test.js** - API endpoint integration tests
 - **amazon-analyzer.test.js** - Amazon analysis module tests
 - **llm-analyzer.test.js** - LLM analysis module tests
+- **scraper.test.js** - Retail scraper functionality tests
+- **search-integration.test.js** - End-to-end search workflow tests
+- **realtime-update.test.js** - Real-time product update functionality tests
 
-### Total Tests: 28 passing
+### Total Tests: 69 passing
 
 ## Running Tests
 
@@ -170,5 +173,43 @@ Potential test enhancements:
 - [ ] Add end-to-end tests with Playwright/Puppeteer
 - [ ] Add performance benchmarks
 - [ ] Add security vulnerability scanning
+
+## New Test Suites
+
+### Scraper Tests (scraper.test.js)
+Tests the RetailScraper class functionality:
+- ✅ Initializes with correct retailers
+- ✅ Returns products for each retailer (walmart, walgreens, target)
+- ✅ Filters products by search query
+- ✅ Validates product data structure
+- ✅ Handles case-insensitive searches
+- ✅ Validates ASIN format
+- ✅ Ensures clearance products are marked correctly
+
+### Search Integration Tests (search-integration.test.js)
+End-to-end tests for the complete search workflow:
+- ✅ Scrapes products from all retailers
+- ✅ Validates retailer names
+- ✅ Fetches Amazon data for products
+- ✅ Handles invalid ASINs
+- ✅ Completes full search workflow (scrape → analyze)
+- ✅ Handles concurrent Amazon requests
+- ✅ Validates response times
+- ✅ Tests search with no results
+
+### Real-time Update Tests (realtime-update.test.js)
+Tests for progressive product display functionality:
+- ✅ Displays products progressively (not all at once)
+- ✅ Shows/hides loading indicator correctly
+- ✅ Clears previous results before new search
+- ✅ Prevents concurrent searches
+- ✅ Allows new search after previous completes
+- ✅ Refreshes search results at intervals
+- ✅ Creates product cards with all required elements
+- ✅ Applies correct CSS classes based on recommendations
+- ✅ Continues displaying products even if one fails
+- ✅ Displays error messages appropriately
+
+**Key Fix:** Products now display in real-time as they are analyzed, rather than waiting for all products to complete analysis. This provides better user experience and feedback during the search process.
 - [ ] Add integration tests with real API calls (mocked)
 - [ ] Increase test coverage for edge cases
